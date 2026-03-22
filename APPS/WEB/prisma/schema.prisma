@@ -1,0 +1,197 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  RESIDENT
+  STAFF
+  ADMIN
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum VerificationAiStatus {
+  PENDING
+  TIMED_OUT
+  APPROVED_BY_AI
+  APPROVED_BY_STAFF
+  REJECTED_BY_STAFF
+}
+
+enum StaffAction {
+  APPROVED
+  REJECTED
+  NOTE_ADDED
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  phone     String
+  address   String?
+  city      String?
+  zip       String?
+  role      UserRole @default(RESIDENT)
+  createdAt DateTime @default(now())
+
+  applications          Application[]
+  documentVerifications DocumentVerification[] @relation("UserDocumentVerifications")
+  staffActivities       StaffActivity[]        @relation("UserStaffActivities")
+  reviewedDocuments     DocumentVerification[] @relation("VerificationReviewedBy")
+  appointments          Appointment[]
+
+  staffCaseNotes    CaseNote[] @relation("StaffCaseNotes")
+  residentCaseNotes CaseNote[] @relation("ResidentCaseNotes")
+}
+
+model Application {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  status    String   @default("DRAFT")
+  formData  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  steps                 ApplicationStep[]
+  documentVerifications DocumentVerification[]
+}
+
+model ApplicationStep {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+  stepKey       String
+  payload       Json
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([applicationId, stepKey])
+}
+
+model DocumentVerification {
+  id            String               @id @default(cuid())
+  userId        String
+  applicationId String?
+  documentType  String
+  fileName      String
+  fileUrl       String?
+  caseNumber    String?              @unique
+  status        VerificationStatus   @default(PENDING)
+  aiStatus      VerificationAiStatus @default(PENDING)
+  isStaffReview Boolean              @default(false)
+  isActive      Boolean              @default(true)
+
+  isException     Boolean   @default(false)
+  exceptionReason String?
+  flaggedAt       DateTime?
+  flaggedById     String?
+
+  aiConfidence    Float?
+  ocrText         String?
+  extractedFields Json?
+  submittedAt     DateTime  @default(now())
+  sentToStaffAt   DateTime?
+  reviewedAt      DateTime?
+  reviewedById    String?
+  reviewNotes     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user         User         @relation("UserDocumentVerifications", fields: [userId], references: [id])
+  application  Application? @relation(fields: [applicationId], references: [id])
+  reviewedBy   User?        @relation("VerificationReviewedBy", fields: [reviewedById], references: [id])
+
+  staffActivities StaffActivity[]
+  caseNotes       CaseNote[]
+  appointments    Appointment[]
+
+  @@index([userId])
+  @@index([applicationId])
+  @@index([status])
+  @@index([isStaffReview])
+  @@index([submittedAt])
+  @@index([isActive])
+  @@index([isException])
+}
+
+model Appointment {
+  id               String            @id @default(cuid())
+  userId           String
+  verificationId   String?
+  locationId       String
+  locationName     String
+  locationAddress  String
+  appointmentDate  DateTime
+  timeLabel        String
+  status           AppointmentStatus @default(SCHEDULED)
+  bookedAt         DateTime          @default(now())
+  completedAt      DateTime?
+  cancelledAt      DateTime?
+  staffId          String?
+  staffName        String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  user           User                  @relation(fields: [userId], references: [id])
+  verification   DocumentVerification? @relation(fields: [verificationId], references: [id])
+
+  @@index([userId])
+  @@index([verificationId])
+  @@index([status])
+  @@index([appointmentDate])
+}
+
+model StaffActivity {
+  id             String      @id @default(cuid())
+  staffId        String
+  verificationId String
+  action         StaffAction
+  notes          String?
+  createdAt      DateTime    @default(now())
+
+  staff        User                 @relation("UserStaffActivities", fields: [staffId], references: [id])
+  verification DocumentVerification @relation(fields: [verificationId], references: [id])
+
+  @@index([staffId])
+  @@index([verificationId])
+  @@index([createdAt])
+}
+
+model CaseNote {
+  id             String   @id @default(cuid())
+  verificationId String
+  staffId        String
+  residentId     String
+  documentType   String
+  note           String
+  createdAt      DateTime @default(now())
+
+  verification DocumentVerification @relation(fields: [verificationId], references: [id])
+  staff        User                 @relation("StaffCaseNotes", fields: [staffId], references: [id])
+  resident     User                 @relation("ResidentCaseNotes", fields: [residentId], references: [id])
+
+  @@index([verificationId])
+  @@index([staffId])
+  @@index([residentId])
+  @@index([createdAt])
+}
