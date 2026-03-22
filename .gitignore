@@ -1,0 +1,6 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# curl / browser cookie dumps (often contain session secrets)
+**/cookies.txt

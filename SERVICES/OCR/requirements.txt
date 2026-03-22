@@ -1,0 +1,32 @@
+# Lease Document Extraction - ML Pipeline
+# Python 3.9+
+
+# Core ML / Vision
+torch>=2.0.0
+torchvision>=0.15.0
+
+# OCR (primary: PaddleOCR)
+paddlepaddle>=2.5.0
+paddleocr>=2.7.0
+# Fallback
+easyocr>=1.7.0
+
+# Image processing & augmentation
+opencv-python>=4.8.0
+Pillow>=10.0.0
+albumentations>=1.3.0
+numpy>=1.24.0
+
+# Data handling
+pandas>=2.0.0
+scikit-learn>=1.3.0
+
+# Utilities
+tqdm>=4.65.0
+pyyaml>=6.0
+certifi>=2023.0.0
+
+# API (for Render / frontend)
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6

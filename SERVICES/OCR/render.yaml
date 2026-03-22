@@ -1,0 +1,11 @@
+# Render Blueprint (optional). Or set in Dashboard.
+services:
+  - type: web
+    name: lease-extraction-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK
+        value: "True"
+    # Use at least 1–2 GB RAM (Starter/Standard). Free tier 512MB may OOM.
